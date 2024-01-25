@@ -13,7 +13,7 @@
 
 / {
 	model = "Praxis Linux TFT Board";
-	compatible = "rockchip,rk3568-praxis-tft","rockchip,rk3568-evb1-v10", "rockchip,rk3568";
+	compatible = "rockchip,rk3568-praxis-tft", "rockchip,rk3568";
 
 	aliases {
 		ethernet0 = &gmac0;
@@ -131,6 +131,96 @@
 			regulator-off-in-suspend;
 		};
 	};
+
+/*
+	switch@0 {
+		compatible = "realtek,rtl8365mb";
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&realtek_smi &realtek_int>;
+
+		mdc-gpios = <&gpio2 RK_PC3 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+		mdio-gpios = <&gpio2 RK_PC4 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+
+		switch_intc1: interrupt-controller {
+			interrupt-parent = <&gpio3>;
+			interrupts = <RK_PC3 IRQ_TYPE_LEVEL_LOW>;
+			interrupt-controller;
+			#address-cells = <0>;
+			#interrupt-cells = <1>;
+		};
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			port@0 {
+				reg = <0>;
+				label = "lan0";
+				phy-handle = <&phy0>;
+			};
+			port@1 {
+				reg = <1>;
+				label = "lan1";
+				phy-handle = <&phy1>;
+			};
+			port@2 {
+				reg = <2>;
+				label = "lan2";
+				phy-handle = <&phy2>;
+			};
+			port@3 {
+				reg = <3>;
+				label = "lan3";
+				phy-handle = <&phy3>;
+			};
+			port@4 {
+				reg = <4>;
+				label = "lan4";
+				phy-handle = <&phy4>;
+			};
+			port@6 {
+				reg = <6>;
+				ethernet = <&gmac0>;
+				phy-mode = "rgmii";
+				fixed-link {
+						speed = <1000>;
+						full-duplex;
+				};
+			};
+		};
+
+		mdio {
+			compatible = "realtek,smi-mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			phy0: ethernet-phy@0 {
+				reg = <0>;
+				interrupt-parent = <&switch_intc1>;
+				interrupts = <0>;
+			};
+			phy1: ethernet-phy@1 {
+				reg = <1>;
+				interrupt-parent = <&switch_intc1>;
+				interrupts = <1>;
+			};
+			phy2: ethernet-phy@2 {
+				reg = <2>;
+				interrupt-parent = <&switch_intc1>;
+				interrupts = <2>;
+			};
+			phy3: ethernet-phy@3 {
+				reg = <3>;
+				interrupt-parent = <&switch_intc1>;
+				interrupts = <3>;
+			};
+			phy4: ethernet-phy@4 {
+				reg = <4>;
+				interrupt-parent = <&switch_intc1>;
+				interrupts = <12>;
+			};
+		};
+	};*/
 };
 
 &combphy0 {
@@ -158,31 +248,93 @@
 };
 
 &gmac0 {
-	phy-mode = "rgmii";
-	clock_in_out = "output";
+	status = "okay";
+	phy-mode = "rgmii-id";
 
 	snps,reset-gpio = <&gpio3 RK_PB7 GPIO_ACTIVE_LOW>;
 	snps,reset-active-low;
-
 	/* Reset time is 20ms, 100ms for rtl8211f */
 	snps,reset-delays-us = <0 20000 100000>;
 
 	assigned-clocks = <&cru SCLK_GMAC0_RX_TX>, <&cru SCLK_GMAC0>;
 	assigned-clock-parents = <&cru SCLK_GMAC0_RGMII_SPEED>;
 	assigned-clock-rates = <0>, <125000000>;
+	/* There is no input clock to GMAC0_MCLKINOUT */
+	clock_in_out = "output";
+
 
 	pinctrl-names = "default";
 	pinctrl-0 = <&gmac0_miim
-		     &gmac0_tx_bus2
-		     &gmac0_rx_bus2
-		     &gmac0_rgmii_clk
-		     &gmac0_rgmii_bus>;
+			&gmac0_tx_bus2
+			&gmac0_rx_bus2
+			&gmac0_rgmii_clk
+			&gmac0_rgmii_bus>;
 
 	tx_delay = <0x43>;
 	rx_delay = <0x33>;
 
-	phy-handle = <&rgmii_phy0>;
-	status = "okay";
+	fixed-link {
+		speed = <1000>;
+		full-duplex;
+		pause;
+	};
+};
+
+&mdio0 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	switch@0 {
+		compatible = "realtek,rtl8365mb";
+		realtek,disable-leds;
+		reg = <0>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				label = "lan0";
+			};
+
+			port@1 {
+				reg = <1>;
+				label = "lan1";
+			};
+
+			port@2 {
+				reg = <2>;
+				label = "lan2";
+			};
+
+			port@3 {
+				reg = <3>;
+				label = "lan3";
+			};
+
+			port@4 {
+				reg = <4>;
+				label = "lan4";
+			};
+
+			port@6 {
+				reg = <6>;
+				label = "cpu";
+				ethernet = <&gmac0>;
+				phy-mode = "rgmii";
+
+				tx-internal-delay-ps = <2000>;
+				rx-internal-delay-ps = <2100>;
+
+				fixed-link {
+					speed = <1000>;
+					full-duplex;
+					pause;
+				};
+			};
+		};
+	};
 };
 
 &gpu {
@@ -427,14 +579,6 @@
 	};
 };
 
-&mdio0 {
-	rgmii_phy0: ethernet-phy@0 {
-		compatible = "ethernet-phy-ieee802.3-c22";
-		reg = <0x0>;
-		clocks = <&cru CLK_MAC0_OUT>;
-	};
-};
-
 &pinctrl {
 	display {
 		vcc3v3_lcd0_n_en: vcc3v3_lcd0_n_en {
@@ -464,6 +608,20 @@
 		};
 		vcc5v0_usb_otg_en: vcc5v0_usb_otg_en {
 			rockchip,pins = <0 RK_PA5 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
+	realtek_switch {
+		realtek_smi:realtek-smi {
+			rockchip,pins =
+				/* MDC */
+				<2 RK_PC3 RK_FUNC_GPIO &pcfg_pull_none>,
+				/* MDIO */
+				<2 RK_PC4 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		realtek_int:realtek-int {
+			rockchip,pins = <3 RK_PC0 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
 };
