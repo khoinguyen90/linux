@@ -86,13 +86,6 @@
 		regulator-max-microvolt = <5000000>;
 		vin-supply = <&vcc5v0_usb>;
 	};
-
-	gmac0_clkin: external-gmac0-clock {
-		compatible = "fixed-clock";
-		clock-frequency = <125000000>;
-		clock-output-names = "gmac0_clkin";
-		#clock-cells = <0>;
-	};
 };
 
 &combphy0 {
@@ -133,15 +126,10 @@
 			&gmac0_rgmii_clk
 			&gmac0_rgmii_bus>;
 
-	snps,reset-gpio = <&gpio0 RK_PB7 GPIO_ACTIVE_LOW>;
-	snps,reset-active-low;
-	/* Reset time is 20ms, 100ms for rtl8211f */
-	snps,reset-delays-us = <0 20000 100000>;
-
 	status = "okay";
 
 	fixed-link {
-		speed = <10>;
+		speed = <1000>;
 		full-duplex;
 		pause;
 	};
@@ -195,7 +183,7 @@
 				rx-internal-delay-ps = <2100>;
 
 				fixed-link {
-					speed = <10>;
+					speed = <1000>;
 					full-duplex;
 					pause;
 				};
